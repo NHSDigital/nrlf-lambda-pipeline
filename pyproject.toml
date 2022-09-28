@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "nrlf-lambda-pipeline"
+version = "0.1.0"
+description = "Robust implementation of step chaining for AWS Lambda executions"
+authors = ["Joel Klinger <joel.klinger1@nhs.net>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/NHSDigital/nrlf-lambda-pipeline"
+keywords = ["aws lambda", "pipeline"]
+packages = [
+    { include = "lambda_pipeline" },
+]
+exclude = ["lambda_pipeline/tests/**/*", "lambda_pipeline/__pycache__/**/*"]
+
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pydantic = {extras = ["email"], version = "^1.10.2"}
+aws-lambda-powertools = "^1.29.2"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^5.0.4"
+black = "^22.8.0"
+requests = "^2.25.1"
+pytest = "^7.1.3"
+pre-commit = "^2.20.0"
+localstack = "^1.1.0"
+sh = "^1.14.3"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+markers = ["integration: Integration tests"]

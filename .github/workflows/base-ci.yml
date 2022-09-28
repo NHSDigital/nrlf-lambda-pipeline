@@ -1,0 +1,53 @@
+name: Base Continuous Integration Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        required: true
+        type: string
+        default: "3.9"
+
+jobs:
+  base-ci:
+    name: Base-CI
+    runs-on: ubuntu-latest
+
+    services:
+      localstack:
+        image: localstack/localstack:latest
+        env:
+          SERVICES: lambda
+          DEFAULT_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: testing
+          AWS_SECRET_ACCESS_KEY: testing
+        ports:
+          - 4566:4566
+          - 4571:4571
+
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.X
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Run lint
+        run: make lint
+
+      - name: Run unit tests
+        run: make unit-test
+
+      - name: Build the package
+        run: make build
+
+      - name: Run integration tests
+        run: make integration-test

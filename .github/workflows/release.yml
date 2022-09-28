@@ -1,0 +1,23 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  ci:
+    name: Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run CI
+        uses: ./.github/workflows/base-ci.yml
+        with:
+          python-version: "3.9"
+
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "setup.py,dist/*"
+          tag: ${{ env.RELEASE_VERSION }}
