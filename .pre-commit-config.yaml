@@ -9,12 +9,12 @@ repos:
       - id: check-merge-conflict
       - id: end-of-file-fixer
       - id: trailing-whitespace
-      # - id: no-commit-to-branch
-      #   name: Prevent commits to dev / master
-      #   entry: no-commit-to-branch
-      #   language: python
-      #   args: ["-b", develop, "-b", master, "-b", main]
-      #   pass_filenames: false
+      - id: no-commit-to-branch
+        name: Prevent commits to dev / master
+        entry: no-commit-to-branch
+        language: python
+        args: ["-b", develop, "-b", master, "-b", main]
+        pass_filenames: false
 
   - repo: https://github.com/psf/black
     rev: 22.3.0

@@ -7,12 +7,43 @@ jobs:
     name: CI
     runs-on: ubuntu-latest
 
+    services:
+      localstack:
+        image: localstack/localstack:latest
+        env:
+          SERVICES: iam,lambda
+        ports:
+          - 4566:4566
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+
     strategy:
       matrix:
-        python-version: ["3.9", "3.10"]
+        python-version: ["3.9", "3.10"] # Add supported python versions here
 
     steps:
-      - name: Run CI
-        uses: ./.github/workflows/base-ci.yml
+      - name: Clone repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.X
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Install poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Run lint
+        run: make lint
+
+      - name: Run unit tests
+        run: make unit-test
+
+      - name: Build the package
+        run: make build
+
+      - name: Run integration tests
+        run: make integration-test

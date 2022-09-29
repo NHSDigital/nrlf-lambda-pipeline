@@ -2,7 +2,6 @@ from contextlib import contextmanager
 import json
 import os
 import shutil
-import sys
 import zipfile
 from copy import deepcopy
 from pathlib import Path
@@ -14,7 +13,7 @@ import sh
 from example.api.tests import example_event
 
 REGION_NAME = "us-east-1"
-ENDPOINT_URL = "http://localhost.localstack.cloud:4566"
+ENDPOINT_URL = "http://localhost:4566"
 ROLE_NAME = "lambda-creator"
 PKG_NAME = "lambda_pipeline"
 EXAMPLES_NAME = "example"
@@ -32,7 +31,9 @@ IGNORE_PATTERNS = [
 
 
 def boto3_client(*args, **kwargs):
-    return _boto3.client(endpoint_url=ENDPOINT_URL, *args, **kwargs)
+    return _boto3.client(
+        endpoint_url=ENDPOINT_URL, region_name=REGION_NAME, *args, **kwargs
+    )
 
 
 @pytest.fixture()
@@ -42,7 +43,6 @@ def event():
 
 @pytest.fixture(scope="session", autouse=True)
 def aws_credentials():
-    """Mocked AWS Credentials for moto."""
     os.environ["AWS_DEFAULT_REGION"] = REGION_NAME
     os.environ["AWS_ACCESS_KEY_ID"] = "testing"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
@@ -57,7 +57,7 @@ def lambda_client():
 
 @pytest.fixture(scope="session")
 def lambda_role():
-    iam = boto3_client("iam", region_name=REGION_NAME)
+    iam = boto3_client("iam")
     yield iam.create_role(
         RoleName=ROLE_NAME,
         AssumeRolePolicyDocument=json.dumps(
