@@ -6,15 +6,27 @@ on:
       - "*"
 
 jobs:
-  ci:
+  release:
     name: Release
     runs-on: ubuntu-latest
 
     steps:
-      - name: Run CI
-        uses: ./.github/workflows/base-ci.yml
+      - name: Clone repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.X
+        uses: actions/setup-python@v2
         with:
-          python-version: "3.9"
+          python-version: "3.9" # Set minimum python version here
+
+      - name: Install poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Build the package
+        run: make build
 
       - name: Create release
         uses: ncipollo/release-action@v1
