@@ -193,12 +193,3 @@ Create a build of this package
 ```
 poetry build
 ```
-
-## TODO
-
-- Migrate to GitHb
-- Update URLs in this README and pyproject.toml
-- Update author / maintainer info in pyproject.toml
-- Decide on publish via github or pypi
-- Add `scripts` for CI (lint / version increment check / test:unit (python 3.9 - 3.10) / test:integration (python 3.9 - 3.10) / build / publish)
-- Add GitHub Actions
