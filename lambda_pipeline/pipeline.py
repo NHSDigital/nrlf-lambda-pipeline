@@ -59,6 +59,7 @@ def make_pipeline(
     event: BaseModel,
     context: LambdaContext,
     dependencies: FrozenDict[str, Any],
+    verbose=False,
 ) -> FunctionType:
 
     event.__config__.allow_mutation = False
@@ -72,8 +73,9 @@ def make_pipeline(
         lambda step: do_not_persist_changes_to_context(
             step=step, initial_context=context
         ),
-        logging,
     ]
+    if verbose:
+        step_decorators.append(logging)
 
     decorated_steps = map(
         lambda step: _decorate_step(step=step, decorators=step_decorators),
