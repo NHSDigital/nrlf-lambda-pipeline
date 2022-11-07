@@ -5,8 +5,6 @@ from types import FunctionType
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from pydantic import validate_arguments as _validate_arguments
 
-from lambda_pipeline.logging import logger
-
 
 class PipelineSignatureError(Exception):
     pass
@@ -44,11 +42,6 @@ def validate_output(step: FunctionType, template_step: FunctionType) -> Function
         return result
 
     return wrapper
-
-
-def logging(step: FunctionType) -> FunctionType:
-    logger.info(f"Executing {step.__name__}")
-    return step
 
 
 def do_not_persist_changes_to_context(

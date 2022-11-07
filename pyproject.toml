@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nrlf-lambda-pipeline"
-version = "0.1.0"
+version = "0.2.0"
 description = "Robust implementation of step chaining for AWS Lambda executions"
 authors = ["Joel Klinger <joel.klinger1@nhs.net>"]
 license = "MIT"
