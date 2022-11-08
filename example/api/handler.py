@@ -1,4 +1,5 @@
 import json
+from logging import Logger
 import os
 from typing import Any
 
@@ -27,6 +28,7 @@ def authorise(
     event: EventModel,
     context: LambdaContext,
     dependencies: FrozenDict[str, Any],
+    logger: Logger,
 ) -> PipelineData:
     """An example of a step that may throw an exception"""
     auth_level = int(event.headers["auth_level"])
@@ -40,6 +42,7 @@ def validate_x_request_url(
     event: EventModel,
     context: LambdaContext,
     dependencies: FrozenDict[str, Any],
+    logger: Logger,
 ) -> PipelineData:
     """An example of standardising an unstandardised third party tool by wrapping"""
     try:
@@ -54,6 +57,7 @@ def a_flaky_step(
     event: EventModel,
     context: LambdaContext,
     dependencies: FrozenDict[str, Any],
+    logger: Logger,
 ) -> PipelineData:
     """An example of a step that will raise a 500 in the right conditions"""
     if os.environ.get("FLAKE_OUT"):
@@ -66,6 +70,7 @@ def intermediate_step(
     event: EventModel,
     context: LambdaContext,
     dependencies: FrozenDict[str, Any],
+    logger: Logger,
 ) -> PipelineData:
     """An example of an intermediate step that mutates a pipeline data field"""
     return PipelineData(something_for_later="hello, world")
@@ -76,6 +81,7 @@ def read_document_from_db(
     event: EventModel,
     context: LambdaContext,
     dependencies: FrozenDict[str, Any],
+    logger: Logger,
 ) -> PipelineData:
     """An example of a step that mutates the pipeline 'data' "body" field, which is used in the response"""
 
@@ -93,6 +99,7 @@ def render_response(
     event: EventModel,
     context: LambdaContext,
     dependencies: FrozenDict[str, Any],
+    logger: Logger,
 ) -> PipelineData:
     """An example of a step that mutates the pipeline 'data' "body" field, which is used in the response"""
     response = response_200(body=json.dumps(data["body"]))

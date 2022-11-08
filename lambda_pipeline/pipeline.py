@@ -1,4 +1,5 @@
 from functools import reduce
+from logging import Logger
 from types import FunctionType
 from typing import Any
 
@@ -8,7 +9,6 @@ from pydantic import BaseModel
 from lambda_pipeline.step_decorators import (
     do_not_persist_changes_to_context,
     enforce_step_signature,
-    logging,
     validate_arguments,
     validate_output,
 )
@@ -23,6 +23,7 @@ def _make_template_step(event_type: type) -> FunctionType:
         event: event_type,
         context: LambdaContext,
         dependencies: FrozenDict[str, Any],
+        logger: Logger,
     ) -> PipelineData:
         raise NotImplementedError
 
@@ -40,6 +41,7 @@ def _chain_steps(
     event: BaseModel,
     context: LambdaContext,
     dependencies: FrozenDict[str, Any],
+    logger: Logger,
 ) -> FunctionType:
     return lambda data: reduce(
         lambda _data, step: step(
@@ -47,6 +49,7 @@ def _chain_steps(
             event=event,
             context=context,
             dependencies=dependencies,
+            logger=logger,
         ),
         steps,
         data,
@@ -59,6 +62,7 @@ def make_pipeline(
     event: BaseModel,
     context: LambdaContext,
     dependencies: FrozenDict[str, Any],
+    logger: Logger,
     verbose=False,
 ) -> FunctionType:
 
@@ -74,8 +78,6 @@ def make_pipeline(
             step=step, initial_context=context
         ),
     ]
-    if verbose:
-        step_decorators.append(logging)
 
     decorated_steps = map(
         lambda step: _decorate_step(step=step, decorators=step_decorators),
@@ -87,4 +89,5 @@ def make_pipeline(
         event=event,
         context=context,
         dependencies=dependencies,
+        logger=logger,
     )

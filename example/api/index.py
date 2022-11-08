@@ -1,4 +1,5 @@
 import json
+from logging import getLogger
 from example.api.handler import (
     EventModel,
     HandlerError,
@@ -22,6 +23,7 @@ def handler(event: dict, context: LambdaContext = None) -> dict[str, str]:
         event=EventModel(**event),
         context=context,
         dependencies=shared_dependencies,
+        logger=getLogger(__name__),
     )
 
     try:

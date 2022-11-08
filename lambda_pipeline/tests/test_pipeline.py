@@ -1,5 +1,6 @@
 import json
 from functools import cache
+from logging import Logger, getLogger
 from pathlib import Path
 from types import FunctionType
 from typing import Any
@@ -21,6 +22,8 @@ from lambda_pipeline.step_decorators import (
 )
 from lambda_pipeline.types import FrozenDict, PipelineData
 from pydantic import ValidationError
+
+LOGGER = getLogger(__name__)
 
 
 @cache
@@ -51,6 +54,7 @@ def steps():
         event: EventModel,
         context: LambdaContext,
         dependencies: FrozenDict[str, Any],
+        logger: Logger,
     ) -> PipelineData:
         return PipelineData(first_step_result=data["input_data"].title())
 
@@ -59,6 +63,7 @@ def steps():
         event: EventModel,
         context: LambdaContext,
         dependencies: FrozenDict[str, Any],
+        logger: Logger,
     ) -> PipelineData:
         return PipelineData(
             second_step_result=data["first_step_result"].upper(), **data
@@ -69,6 +74,7 @@ def steps():
         event: EventModel,
         context: LambdaContext,
         dependencies: FrozenDict[str, Any],
+        logger: Logger,
     ) -> PipelineData:
         _data = data.to_dict()
         return PipelineData(
@@ -88,12 +94,15 @@ def test__make_template_step():
         "context": LambdaContext,
         "data": PipelineData,
         "dependencies": FrozenDict[str, Any],
+        "logger": Logger,
         "event": str,
         "return": PipelineData,
     }
 
     with pytest.raises(NotImplementedError):
-        template_step(data="foo", event="bar", context="spam", dependencies="eggs")
+        template_step(
+            data="foo", event="bar", context="spam", dependencies="eggs", logger="ham"
+        )
 
 
 def test__decorate_step():
@@ -136,7 +145,11 @@ def test__decorate_step():
 
 def test__chain_steps(steps, event, context, dependencies):
     chain = _chain_steps(
-        steps=steps, event=event, context=context, dependencies=dependencies
+        steps=steps,
+        event=event,
+        context=context,
+        dependencies=dependencies,
+        logger=LOGGER,
     )
     result = chain(data=PipelineData(input_data="foo"))
     assert result.to_dict() == {
@@ -147,7 +160,11 @@ def test__chain_steps(steps, event, context, dependencies):
 
 def test_make_pipeline(steps, event, context, dependencies):
     pipeline = make_pipeline(
-        steps=steps, event=event, context=context, dependencies=dependencies
+        steps=steps,
+        event=event,
+        context=context,
+        dependencies=dependencies,
+        logger=LOGGER,
     )
     result = pipeline(data=PipelineData(input_data="foo"))
     assert result.to_dict() == {
@@ -160,15 +177,19 @@ def test_make_pipeline(steps, event, context, dependencies):
     ("mutator", "exception_text"),
     (
         (
-            lambda data, event, context, dependencies: __setitem(data, "foo", "bar"),
+            lambda data, event, context, dependencies, logger: __setitem(
+                data, "foo", "bar"
+            ),
             "'PipelineData' object does not support item assignment",
         ),
         (
-            lambda data, event, context, dependencies: setattr(event, "body", "foo"),
+            lambda data, event, context, dependencies, logger: setattr(
+                event, "body", "foo"
+            ),
             '"APIGatewayProxyEventModel" is immutable and does not support item assignment',
         ),
         (
-            lambda data, event, context, dependencies: __setitem(
+            lambda data, event, context, dependencies, logger: __setitem(
                 dependencies, "foo", "bar"
             ),
             "'FrozenDict' object does not support item assignment",
@@ -183,8 +204,15 @@ def test_make_pipeline__chain_inputs_are_immutable(
         event: EventModel,
         context: LambdaContext,
         dependencies: FrozenDict[str, Any],
+        logger: Logger,
     ) -> PipelineData:
-        mutator(data=data, event=event, context=context, dependencies=dependencies)
+        mutator(
+            data=data,
+            event=event,
+            context=context,
+            dependencies=dependencies,
+            logger=logger,
+        )
         assert False, "should never get here!"
 
     pipeline = make_pipeline(
@@ -192,6 +220,7 @@ def test_make_pipeline__chain_inputs_are_immutable(
         event=event,
         context=context,
         dependencies={},
+        logger=LOGGER,
     )
     with pytest.raises(TypeError, match=exception_text):
         pipeline(data=PipelineData())
@@ -203,6 +232,7 @@ def test_make_pipeline__context_mutations_not_persisted(event):
         event: EventModel,
         context: LambdaContext,
         dependencies: FrozenDict[str, Any],
+        logger: Logger,
     ) -> PipelineData:
         context._function_name = "foo, bar"
         return PipelineData()
@@ -214,6 +244,7 @@ def test_make_pipeline__context_mutations_not_persisted(event):
         event=event,
         context=context,
         dependencies={},
+        logger=LOGGER,
     )
     pipeline(data=PipelineData())
     assert context._function_name == "spam, eggs"
@@ -226,6 +257,7 @@ def test_make_pipeline__step_signature_enforced(event, context):
         event=event,
         context=context,
         dependencies={},
+        logger=LOGGER,
     )
     with pytest.raises(PipelineSignatureError):
         pipeline(data=PipelineData())
@@ -239,24 +271,35 @@ def test_make_pipeline__step_signature_enforced(event, context):
             "event": event,
             "context": context,
             "dependencies": dependencies,
+            "logger": LOGGER,
         },
         {
             "steps": steps,
             "event": "not an EventModel",
             "context": context,
             "dependencies": dependencies,
+            "logger": LOGGER,
         },
         {
             "steps": steps,
             "event": event,
             "context": "not a LambdaContext",
             "dependencies": dependencies,
+            "logger": LOGGER,
         },
         {
             "steps": steps,
             "event": event,
             "context": context,
             "dependencies": "not a dict-like",
+            "logger": LOGGER,
+        },
+        {
+            "steps": steps,
+            "event": event,
+            "context": context,
+            "dependencies": dependencies,
+            "logger": "not a logger",
         },
     ],
 )
@@ -272,6 +315,7 @@ def test_make_pipeline__output_is_data_pipeline(event, context):
         event: EventModel,
         context: LambdaContext,
         dependencies: FrozenDict[str, Any],
+        logger: Logger,
     ) -> PipelineData:
         return "not a data pipeline"
 
@@ -280,6 +324,7 @@ def test_make_pipeline__output_is_data_pipeline(event, context):
         event=event,
         context=context,
         dependencies={},
+        logger=LOGGER,
     )
     with pytest.raises(PipelineStepOutputError):
         pipeline(data=PipelineData())
