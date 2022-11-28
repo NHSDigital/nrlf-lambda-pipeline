@@ -9,6 +9,12 @@ try:
 except ModuleNotFoundError:
     pass
 
+try:
+    lambda_executors = import_module("localstack.services.awslambda.lambda_executors")
+    LambdaContext = lambda_executors.LambdaContext
+except ModuleNotFoundError:
+    pass
+
 
 class FrozenDict(collections.abc.Mapping):
     """An implementation of a frozen dict, lifted from https://stackoverflow.com/a/2704866/1571593"""
