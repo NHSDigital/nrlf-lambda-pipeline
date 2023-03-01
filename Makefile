@@ -10,7 +10,6 @@ integration-test:
 
 build: clean lint
 	poetry build
-	cd dist && tar -xzf *tar.gz && mv */setup.py ../
 
 clean:
 	rm -rf dist
