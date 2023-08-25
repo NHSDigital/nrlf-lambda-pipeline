@@ -183,6 +183,10 @@ install against the instructions for your operating system. [Docker Desktop](htt
 is a good place to start if you don't have opinions on the matter.
 
 ```
+localstack start -d
+```
+
+```
 python -m pytest -m 'integration'
 ```
 

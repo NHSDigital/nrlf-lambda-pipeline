@@ -1,6 +1,5 @@
 import json
 from copy import deepcopy
-
 import pytest
 from example.api.tests import example_event
 from example.conftest import create_lambda_zip
@@ -38,6 +37,9 @@ def lambda_function(lambda_client, lambda_role):
         Timeout=30,
         MemorySize=128,
     )
+
+    waiter = lambda_client.get_waiter("function_active_v2")
+    waiter.wait(FunctionName=LAMBDA_NAME)
 
     yield lambda **kwargs: lambda_client.invoke(FunctionName=LAMBDA_NAME, **kwargs)
 
