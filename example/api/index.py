@@ -1,23 +1,20 @@
 import json
 from logging import getLogger
+
 from example.api.handler import (
     EventModel,
     HandlerError,
     build_shared_dependencies,
     steps,
 )
-from example.api.response import response_500, response_400
+from example.api.response import response_400, response_500
 from lambda_pipeline.pipeline import make_pipeline
-from lambda_pipeline.types import PipelineData, LambdaContext
-
+from lambda_pipeline.types import LambdaContext, PipelineData
 
 shared_dependencies = build_shared_dependencies()
 
 
-def handler(event: dict, context: LambdaContext = None) -> dict[str, str]:
-    if context is None:
-        context = LambdaContext()
-
+def handler(event: dict, context: LambdaContext) -> dict[str, str]:
     pipeline = make_pipeline(
         steps=steps,
         event=EventModel(**event),

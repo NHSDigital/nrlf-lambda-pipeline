@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
-from pydantic import BaseModel
 
 from aws_lambda_powertools import Logger
+from pydantic import BaseModel
 
 PKG_NAME = Path(__file__).parent.name
 logger = Logger(service_name=PKG_NAME)
@@ -21,16 +21,16 @@ class Response(BaseModel):
 
 
 def response_200(body: str) -> dict:
-    return Response(status_code=200, body=body).dict()
+    return Response(status_code="200", body=body).dict()
 
 
 def response_400(body: str) -> dict:
-    return Response(status_code=400, body=body).dict()
+    return Response(status_code="400", body=body).dict()
 
 
 def response_500(details: str) -> dict:
     return Response(
-        status_code=500,
+        status_code="500",
         body=json.dumps({"message": "Internal Server Error"}),
         details=details,
     ).dict()

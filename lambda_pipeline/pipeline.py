@@ -1,8 +1,5 @@
-from functools import reduce
 from logging import Logger
-from types import FunctionType
-from typing import Any
-
+from typing import Any, Callable, Dict, Iterable, Union
 
 from pydantic import BaseModel
 
@@ -12,11 +9,20 @@ from lambda_pipeline.step_decorators import (
     validate_arguments,
     validate_output,
 )
-from lambda_pipeline.types import FrozenDict, PipelineData, LambdaContext
+from lambda_pipeline.types import FrozenDict, LambdaContext, PipelineData
 
 
-def _make_template_step(event_type: type) -> FunctionType:
-    """A factory method for creating the template for steps"""
+def _make_template_step(event_type: type) -> Callable:
+    """
+    Create a template step function.
+
+    Args:
+        event_type (type): The type of event that the step function expects.
+
+    Returns:
+        Callable: The template step function.
+
+    """
 
     def _TEMPLATE_STEP(
         data: PipelineData,
@@ -30,59 +36,97 @@ def _make_template_step(event_type: type) -> FunctionType:
     return _TEMPLATE_STEP
 
 
-def _decorate_step(step: FunctionType, decorators: list[FunctionType]) -> FunctionType:
+def _decorate_step(step: Callable, decorators: list[Callable]) -> Callable:
+    """
+    Decorates a step function with a list of decorators in reverse order.
+
+    Args:
+        step (Callable): The step function to be decorated.
+        decorators (list[Callable]): The list of decorators to be applied.
+
+    Returns:
+        Callable: The decorated step function.
+    """
     for deco in reversed(decorators):
         step = deco(step)
     return step
 
 
 def _chain_steps(
-    steps: list[FunctionType],
+    steps: Iterable[Callable],
     event: BaseModel,
     context: LambdaContext,
     dependencies: FrozenDict[str, Any],
     logger: Logger,
-) -> FunctionType:
-    return lambda data: reduce(
-        lambda _data, step: step(
-            data=_data,
-            event=event,
-            context=context,
-            dependencies=dependencies,
-            logger=logger,
-        ),
-        steps,
-        data,
-    )
+) -> Callable:
+    """
+    Chains a series of steps together and returns a callable function that executes the steps in sequence.
+
+    Args:
+        steps (Iterable[Callable]): The steps to be executed in sequence.
+        event (BaseModel): The event data.
+        context (LambdaContext): The Lambda context.
+        dependencies (FrozenDict[str, Any]): The dependencies required by the steps.
+        logger (Logger): The logger object.
+
+    Returns:
+        Callable: A function that executes the steps in sequence.
+    """
+
+    def chain(data: PipelineData) -> PipelineData:
+        for step in steps:
+            data = step(
+                data=data,
+                event=event,
+                context=context,
+                dependencies=dependencies,
+                logger=logger,
+            )
+        return data
+
+    return chain
 
 
 @validate_arguments
 def make_pipeline(
-    steps: list[FunctionType],
+    steps: list[Callable],
     event: BaseModel,
     context: LambdaContext,
-    dependencies: FrozenDict[str, Any],
+    dependencies: Union[Dict[str, Any], FrozenDict[str, Any]],
     logger: Logger,
     verbose=False,
-) -> FunctionType:
+) -> Callable:
+    """
+    Creates a pipeline by chaining together a series of steps.
 
-    event.__config__.allow_mutation = False
-    dependencies = FrozenDict(dependencies)
+    Args:
+        steps (list[Callable]): A list of callable steps to be executed in the pipeline.
+        event (BaseModel): The input event for the pipeline.
+        context (LambdaContext): The Lambda execution context.
+        dependencies (Union[Dict[str, Any], FrozenDict[str, Any]]): The dependencies required by the pipeline steps.
+        logger (Logger): The logger to be used for logging.
+        verbose (bool, optional): Whether to enable verbose logging. Defaults to False.
+
+    Returns:
+        Callable: A callable representing the pipeline.
+    """
+
+    event.model_config["frozen"] = True
+
+    if not isinstance(dependencies, FrozenDict):
+        dependencies = FrozenDict(dependencies)
 
     template_step = _make_template_step(event_type=type(event))
+
+    # Decorators to be applied to each step
     step_decorators = [
-        lambda step: enforce_step_signature(step=step, template_step=template_step),
+        enforce_step_signature(template_step=template_step),
         validate_arguments,
-        lambda step: validate_output(step=step, template_step=template_step),
-        lambda step: do_not_persist_changes_to_context(
-            step=step, initial_context=context
-        ),
+        validate_output(template_step=template_step),
+        do_not_persist_changes_to_context(initial_context=context),
     ]
 
-    decorated_steps = map(
-        lambda step: _decorate_step(step=step, decorators=step_decorators),
-        steps,
-    )
+    decorated_steps = [_decorate_step(step, step_decorators) for step in steps]
 
     return _chain_steps(
         steps=decorated_steps,

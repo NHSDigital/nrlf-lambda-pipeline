@@ -1,16 +1,17 @@
 import json
-from logging import Logger
 import os
+from logging import Logger
 from typing import Any
 
 from aws_lambda_powertools.utilities.parser.models import (
     APIGatewayProxyEventModel as EventModel,
 )
+
 from example.api.response import response_200
 from example.some_third_party_lib.some_third_party_tool import (
     validate_x_request_url as _validate_x_request_url,
 )
-from lambda_pipeline.types import PipelineData, FrozenDict, LambdaContext
+from lambda_pipeline.types import FrozenDict, LambdaContext, PipelineData
 
 MIN_AUTH_LEVEL = 2
 
@@ -34,6 +35,7 @@ def authorise(
     auth_level = int(event.headers["auth_level"])
     if auth_level < MIN_AUTH_LEVEL:
         raise HandlerError("Minimum authorisation not satisfied")
+
     return data
 
 
