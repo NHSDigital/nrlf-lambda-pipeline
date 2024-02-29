@@ -1,7 +1,6 @@
-import collections
+import collections.abc
 from importlib import import_module
-
-from aws_lambda_powertools.utilities.typing import LambdaContext
+from typing import Dict, Generic, TypeVar
 
 try:
     lambda_context = import_module("awslambdaric.lambda_context")
@@ -15,27 +14,34 @@ try:
 except ModuleNotFoundError:
     pass
 
+if "LambdaContext" not in locals():
+    from aws_lambda_powertools.utilities.typing import LambdaContext
 
-class FrozenDict(collections.abc.Mapping):
+
+FDKey = TypeVar("FDKey", bound=str)
+FDValue = TypeVar("FDValue")
+
+
+class FrozenDict(collections.abc.Mapping, Generic[FDKey, FDValue]):
     """An implementation of a frozen dict, lifted from https://stackoverflow.com/a/2704866/1571593"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Dict[FDKey, FDValue], **kwargs: FDValue):
         self._d = dict(*args, **kwargs)
         self._hash = None
 
     def __iter__(self):
         return iter(self._d)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._d)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: FDKey) -> FDValue:
         return self._d[key]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self._d)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self._d)
 
     def __eq__(self, other: object) -> bool:
@@ -60,7 +66,7 @@ class FrozenDict(collections.abc.Mapping):
         return dict(self._d)
 
 
-class PipelineData(FrozenDict):
+class PipelineData(FrozenDict[FDKey, FDValue]):
     """
     A dict-object for passing data between pipeline steps.
     Pipeline will force this to be immutable on ingestion to a step.

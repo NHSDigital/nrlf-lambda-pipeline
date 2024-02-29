@@ -1,14 +1,16 @@
 import json
+import re
 from functools import cache
 from logging import Logger, getLogger
 from pathlib import Path
-from types import FunctionType
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 from aws_lambda_powertools.utilities.parser.models import (
     APIGatewayProxyEventModel as EventModel,
 )
+from pydantic import ValidationError
+
 from lambda_pipeline.pipeline import (
     LambdaContext,
     _chain_steps,
@@ -21,7 +23,6 @@ from lambda_pipeline.step_decorators import (
     PipelineStepOutputError,
 )
 from lambda_pipeline.types import FrozenDict, PipelineData
-from pydantic import ValidationError
 
 LOGGER = getLogger(__name__)
 
@@ -133,7 +134,7 @@ def test__decorate_step():
         return wrapper
 
     decorators = [_cast_inputs_to_ints, _double_inputs, _cast_output_to_string]
-    _decorated_function: FunctionType = _decorate_step(
+    _decorated_function: Callable = _decorate_step(
         step=_undecorated_function, decorators=decorators
     )
 
@@ -183,12 +184,6 @@ def test_make_pipeline(steps, event, context, dependencies):
             "'PipelineData' object does not support item assignment",
         ),
         (
-            lambda data, event, context, dependencies, logger: setattr(
-                event, "body", "foo"
-            ),
-            '"APIGatewayProxyEventModel" is immutable and does not support item assignment',
-        ),
-        (
             lambda data, event, context, dependencies, logger: __setitem(
                 dependencies, "foo", "bar"
             ),
@@ -222,7 +217,40 @@ def test_make_pipeline__chain_inputs_are_immutable(
         dependencies={},
         logger=LOGGER,
     )
+
     with pytest.raises(TypeError, match=exception_text):
+        pipeline(data=PipelineData())
+
+
+def test_make_pipeline__event_input_is_frozen(event, context):
+    def mutate_some_state(
+        data: PipelineData,
+        event: EventModel,
+        context: LambdaContext,
+        dependencies: FrozenDict[str, Any],
+        logger: Logger,
+    ) -> PipelineData:
+        event.foo = "bar"
+        assert False, "should never get here!"
+
+    pipeline = make_pipeline(
+        steps=[mutate_some_state],
+        event=event,
+        context=context,
+        dependencies={},
+        logger=LOGGER,
+    )
+
+    with pytest.raises(
+        ValidationError,
+        match=re.escape(
+            "1 validation error for APIGatewayProxyEventModel"
+            "\nfoo\n  "
+            "Instance is frozen "
+            "[type=frozen_instance, input_value='bar', input_type=str]\n    "
+            "For further information visit https://errors.pydantic.dev/2.6/v/frozen_instance"
+        ),
+    ):
         pipeline(data=PipelineData())
 
 
@@ -251,16 +279,14 @@ def test_make_pipeline__context_mutations_not_persisted(event):
 
 
 def test_make_pipeline__step_signature_enforced(event, context):
-
-    pipeline = make_pipeline(
-        steps=[lambda x: x],
-        event=event,
-        context=context,
-        dependencies={},
-        logger=LOGGER,
-    )
     with pytest.raises(PipelineSignatureError):
-        pipeline(data=PipelineData())
+        make_pipeline(
+            steps=[lambda x: x],
+            event=event,
+            context=context,
+            dependencies={},
+            logger=LOGGER,
+        )
 
 
 @pytest.mark.parametrize(

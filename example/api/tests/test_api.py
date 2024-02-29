@@ -1,13 +1,17 @@
 import json
 from copy import deepcopy
+
 import pytest
+
 from example.api.tests import example_event
 from example.conftest import create_lambda_zip
 
 LAMBDA_NAME = "api"
 RUNTIME = "python3.9"
-HEADERS_HAPPY = {"headers": {"auth_level": 10, "x-request-url": "example.com"}}
-HEADERS_BAD_AUTH_LEVEL = {"headers": {"auth_level": 1, "x-request-url": "example.com"}}
+HEADERS_HAPPY = {"headers": {"auth_level": "10", "x-request-url": "example.com"}}
+HEADERS_BAD_AUTH_LEVEL = {
+    "headers": {"auth_level": "1", "x-request-url": "example.com"}
+}
 HEADERS_ILLEGAL_AUTH_LEVEL = {
     "headers": {"auth_level": "foo", "x-request-url": "example.com"}
 }

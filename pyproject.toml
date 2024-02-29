@@ -15,17 +15,18 @@ exclude = ["lambda_pipeline/tests/**/*", "lambda_pipeline/__pycache__/**/*"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-pydantic = {extras = ["email"], version = "^1.10.2"}
-aws-lambda-powertools = "^2.9.0"
+pydantic = {extras = ["email"], version = ">=2.0.3,<3"}
+aws-lambda-powertools = "^2.34.0"
+jmespath = "^1.0.1"
 
-[tool.poetry.dev-dependencies]
-flake8 = "^5.0.4"
-black = "^22.8.0"
-requests = "^2.25.1"
-pytest = "^7.1.3"
-pre-commit = "^2.20.0"
-localstack = "^1.1.0"
-sh = "^1.14.3"
+[tool.poetry.group.dev.dependencies]
+requests = "^2.31.0"
+pytest = "^8.0.2"
+pre-commit = "^3.6.2"
+sh = "^2.0.6"
+boto3 = "^1.34.52"
+black = "^24.2.0"
+isort = "^5.13.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -33,3 +34,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 markers = ["integration: Integration tests"]
+
+[tool.isort]
+profile = "black"

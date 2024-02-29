@@ -1,8 +1,8 @@
-from contextlib import contextmanager
 import json
 import os
 import shutil
 import zipfile
+from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
 
@@ -24,7 +24,6 @@ IGNORE_PATTERNS = [
     "tests",
     "__pycache__",
     ".dist-info",
-    ".so",
     "boto3",
     "botocore",
 ]
@@ -98,7 +97,21 @@ def get_venv_path(build_path: Path) -> Path:
     venv_path = build_path / "_venv"
     reqs_path = build_path / "_requirements.txt"
     sh.poetry("export", "--output", reqs_path, "--without-hashes")
-    sh.pip("install", "-r", reqs_path, "-t", venv_path)
+    sh.pip(
+        "install",
+        "-r",
+        reqs_path,
+        "-t",
+        venv_path,
+        "--platform",
+        "manylinux2014_x86_64",
+        "--implementation",
+        "cp",
+        "--python-version",
+        "3.9",
+        "--only-binary=:all:",
+        "--upgrade",
+    )
     return venv_path
 
 
@@ -125,16 +138,20 @@ def create_lambda_zip(lambda_name: str) -> bytes:
     zipfile_path = build_path / LAMBDA_ZIP
     handler_path = examples_path / lambda_name / INDEX_FILE
 
-    with named_temp_dir(path=build_path):
-        venv_path = get_venv_path(build_path)
+    # with named_temp_dir(path=build_path):
+    build_path.mkdir(parents=True, exist_ok=True)
 
-        with zipfile.ZipFile(zipfile_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            write_to_zip(zip_file=zip_file, path=package_path, relative_to=root_path)
-            write_to_zip(zip_file=zip_file, path=examples_path, relative_to=root_path)
-            write_to_zip(zip_file=zip_file, path=venv_path, relative_to=venv_path)
-            zip_file.write(handler_path, INDEX_FILE)
+    venv_path = get_venv_path(build_path)
 
-        with open(zipfile_path, "rb") as file_data:
-            bytes_content = file_data.read()
+    print(venv_path)
+
+    with zipfile.ZipFile(zipfile_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        write_to_zip(zip_file=zip_file, path=package_path, relative_to=root_path)
+        write_to_zip(zip_file=zip_file, path=examples_path, relative_to=root_path)
+        write_to_zip(zip_file=zip_file, path=venv_path, relative_to=venv_path)
+        zip_file.write(handler_path, INDEX_FILE)
+
+    with open(zipfile_path, "rb") as file_data:
+        bytes_content = file_data.read()
 
     return bytes_content

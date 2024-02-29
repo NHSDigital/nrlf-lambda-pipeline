@@ -1,5 +1,6 @@
-from functools import cache
 import json
+from functools import cache
+
 import requests
 
 TEST_EVENT_URL = (
